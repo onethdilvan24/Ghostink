@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "AI Text Generator",
+  "version": "1.0",
+  "description": "Generate text using AI in any text field",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": "icons/icon48.png"
+  },
+  "background": {
+    "service_worker": "scripts/background.js"
+  },
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["scripts/content.js"],
+    "css": ["scripts/content.css"]
+  }],
+  "web_accessible_resources": [{
+    "resources": ["icons/*", "popup/*"],
+    "matches": ["<all_urls>"]
+  }],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+} 

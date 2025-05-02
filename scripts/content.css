@@ -1,0 +1,44 @@
+.ai-generate-button {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s, background-color 0.2s;
+  border: 1px solid #ccc;
+  background-color: white;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  outline: none;
+}
+
+.ai-generate-button:hover {
+  opacity: 1;
+  background-color: #f5f5f5;
+}
+
+.ai-generate-button:active {
+  background-color: #e5e5e5;
+}
+
+.ai-generate-button.generating {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.ai-generate-button img {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* Position the button in the top-right corner of the parent element */
+.ai-button-container {
+  position: relative;
+  display: inline-block;
+} 
