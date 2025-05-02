@@ -1,9 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Get UI elements
     const generateButton = document.getElementById('generate');
     const promptInput = document.getElementById('prompt');
 
+    // Check if elements exist
+    if (!generateButton || !promptInput) {
+        console.error('Required elements not found in popup.html');
+        return;
+    }
+
     // Focus the input when popup opens
-    promptInput.focus();
+    try {
+        promptInput.focus();
+    } catch (error) {
+        console.error('Error focusing input:', error);
+    }
 
     // Handle enter key in textarea
     promptInput.addEventListener('keydown', (e) => {
@@ -14,7 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     generateButton.addEventListener('click', async () => {
-        const prompt = promptInput.value.trim();
+        // Safely get the prompt value
+        const promptValue = promptInput?.value;
+        const prompt = typeof promptValue === 'string' ? promptValue.trim() : '';
         
         if (!prompt) {
             promptInput.classList.add('error');
@@ -22,25 +35,50 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Update button state
         generateButton.disabled = true;
+        const originalText = generateButton.textContent;
         generateButton.textContent = 'Generating...';
         
         try {
             // Get the active tab
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            const tab = tabs?.[0];
             
-            if (!tab) {
+            if (!tab?.id) {
                 throw new Error('No active tab found');
             }
 
-            // Send message to content script
-            await chrome.tabs.sendMessage(tab.id, {
-                action: 'generate',
-                prompt: prompt
-            });
-
-            // Close the popup after successful generation
-            window.close();
+            // Try to send message to content script with retries
+            let retries = 2;
+            let lastError = null;
+            
+            for (let i = 0; i <= retries; i++) {
+                try {
+                    const response = await chrome.tabs.sendMessage(tab.id, {
+                        action: 'generate',
+                        prompt: prompt
+                    });
+                    
+                    if (response?.success) {
+                        // Close the popup after successful generation
+                        window.close();
+                        return;
+                    } else if (response?.error) {
+                        throw new Error(response.error);
+                    }
+                } catch (error) {
+                    lastError = error;
+                    if (i < retries) {
+                        // Wait before retrying (exponential backoff)
+                        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+                        continue;
+                    }
+                    throw error;
+                }
+            }
+            
+            throw lastError || new Error('Failed to generate text');
         } catch (error) {
             console.error('Error:', error);
             
@@ -50,12 +88,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 errorMessage = 'Please open a webpage before generating text.';
             } else if (error.message.includes('Could not establish connection')) {
                 errorMessage = 'Please refresh the page and try again.';
+            } else if (error.message.includes('Cannot read properties')) {
+                errorMessage = 'Error accessing text field. Please try again.';
+            } else if (error.message.includes('Please focus on a text field')) {
+                errorMessage = 'Please click into a text field first.';
             }
             
-            alert(errorMessage);
+            // Show error in popup
+            const errorElement = document.createElement('div');
+            errorElement.className = 'error-message';
+            errorElement.textContent = errorMessage;
+            promptInput.parentElement.appendChild(errorElement);
+            
+            // Remove error message after 3 seconds
+            setTimeout(() => {
+                errorElement.remove();
+            }, 3000);
         } finally {
+            // Reset button state
             generateButton.disabled = false;
-            generateButton.textContent = 'Generate';
+            generateButton.textContent = originalText;
         }
     });
 }); 
